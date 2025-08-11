@@ -1,0 +1,41 @@
+body {
+    background-color: #f8f9fa;
+}
+
+#app {
+    display: flex;
+}
+
+.content {
+    width: 100%;
+    padding: 20px;
+}
+
+.kpi-card {
+    border: none;
+    border-radius: 15px;
+    color: white;
+    padding: 20px;
+}
+
+.kpi-card .value {
+    font-size: 2.5rem;
+    font-weight: bold;
+}
+
+.kpi-card .icon {
+    font-size: 3rem;
+    opacity: 0.5;
+}
+
+.bg-gradient-1 { background: linear-gradient(45deg, #007bff, #0056b3); }
+.bg-gradient-2 { background: linear-gradient(45deg, #28a745, #1e7e34); }
+.bg-gradient-3 { background: linear-gradient(45deg, #ffc107, #c79100); }
+.bg-gradient-4 { background: linear-gradient(45deg, #17a2b8, #117a8b); }
+
+.chart-container {
+    background: #fff;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
