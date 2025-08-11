@@ -7,5 +7,10 @@ class SalesData(models.Model):
     quantity = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        permissions = [
+            ("view_detailed_analysis", "Can view the detailed analysis page"),
+        ]
+
     def __str__(self):
         return f'{self.product} - {self.date}'

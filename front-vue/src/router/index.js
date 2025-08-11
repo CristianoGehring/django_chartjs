@@ -32,11 +32,19 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
     const authStore = useAuthStore();
-    if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-        next('/login');
-    } else {
-        next();
+    const requiresAuth = to.meta.requiresAuth;
+    const requiredPermission = to.meta.permission;
+
+    if (requiresAuth && !authStore.isAuthenticated) {
+        return next('/login');
     }
+
+    if (requiredPermission && !authStore.hasPermission(requiredPermission)) {
+        // Redirect to a "Not Authorized" page or home page
+        return next('/'); 
+    }
+
+    next();
 });
 
 export default router;

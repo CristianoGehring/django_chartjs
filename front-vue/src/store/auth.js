@@ -1,41 +1,48 @@
 import { defineStore } from 'pinia';
 import api from '@/services/api';
 import router from '@/router';
+import { jwtDecode } from 'jwt-decode';
 
 export const useAuthStore = defineStore('auth', {
     state: () => ({
         token: localStorage.getItem('token') || null,
-        user: JSON.parse(localStorage.getItem('user')) || null
+        user: JSON.parse(localStorage.getItem('user')) || null,
+        permissions: JSON.parse(localStorage.getItem('permissions')) || []
     }),
     getters: {
-        isAuthenticated: (state) => !!state.token
+        isAuthenticated: (state) => !!state.token,
+        hasPermission: (state) => (permission) => {
+            return state.permissions.includes(permission);
+        }
     },
     actions: {
         async login(credentials) {
             try {
                 const response = await api.login(credentials);
-                // Assuming the token is in response.data.access
                 const token = response.data.access;
+                const decodedToken = jwtDecode(token);
+
                 this.token = token;
-                // For simplicity, we'll mock a user object. In a real app, you'd fetch user data.
-                const user = { username: credentials.username };
-                this.user = user;
+                this.user = { username: decodedToken.username };
+                this.permissions = decodedToken.permissions;
 
                 localStorage.setItem('token', token);
-                localStorage.setItem('user', JSON.stringify(user));
+                localStorage.setItem('user', JSON.stringify(this.user));
+                localStorage.setItem('permissions', JSON.stringify(this.permissions));
                 
                 router.push('/');
             } catch (error) {
                 console.error('Login failed:', error);
-                // You could set an error state here to show in the UI
                 throw error;
             }
         },
         logout() {
             this.token = null;
             this.user = null;
+            this.permissions = [];
             localStorage.removeItem('token');
             localStorage.removeItem('user');
+            localStorage.removeItem('permissions');
             router.push('/login');
         }
     }

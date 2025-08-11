@@ -10,7 +10,7 @@
                     <i class="fas fa-home"></i> Home
                 </RouterLink>
             </li>
-            <li>
+            <li v-if="authStore.hasPermission('dashboard.view_detailed_analysis')">
                 <RouterLink to="/details" class="nav-link" active-class="active">
                     <i class="fas fa-chart-pie"></i> Análise Detalhada
                 </RouterLink>

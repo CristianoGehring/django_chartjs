@@ -15,7 +15,17 @@ class Command(BaseCommand):
 
         self.stdout.write('Creating superuser...')
         if not User.objects.filter(username='admin').exists():
-            User.objects.create_superuser('admin', 'admin@example.com', 'admin123')
+            admin_user = User.objects.create_superuser('admin', 'admin@example.com', 'admin123')
+        else:
+            admin_user = User.objects.get(username='admin')
+
+        # Assign custom permission to admin
+        content_type = ContentType.objects.get_for_model(SalesData)
+        permission = Permission.objects.get(
+            codename='view_detailed_analysis',
+            content_type=content_type,
+        )
+        admin_user.user_permissions.add(permission)
 
         self.stdout.write('Creating sample sales data...')
         products = ['Product A', 'Product B', 'Product C', 'Product D']
