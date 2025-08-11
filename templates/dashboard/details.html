@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1 class="mb-4">Análise Detalhada</h1>
+
+<div class="row">
+    <!-- User Growth Chart -->
+    <div class="col-md-6 mb-4">
+        <div class="chart-container" style="position: relative; height:40vh;">
+            <h5 class="text-center">Crescimento de Usuários (Área)</h5>
+            <canvas id="userGrowthChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Traffic Source Chart -->
+    <div class="col-md-6 mb-4">
+        <div class="chart-container" style="position: relative; height:40vh;">
+            <h5 class="text-center">Fontes de Tráfego (Rosca)</h5>
+            <canvas id="trafficSourceChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Feature Satisfaction Chart -->
+    <div class="col-md-6 mb-4">
+        <div class="chart-container" style="position: relative; height:40vh;">
+            <h5 class="text-center">Satisfação por Feature (Área Polar)</h5>
+            <canvas id="featureSatisfactionChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Acquisition Cost vs LTV Chart -->
+    <div class="col-md-6 mb-4">
+        <div class="chart-container" style="position: relative; height:40vh;">
+            <h5 class="text-center">Custo de Aquisição vs. LTV (Dispersão)</h5>
+            <canvas id="acquisitionCostChart"></canvas>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+    // URLs
+    const userGrowthUrl = "{% url 'api_user_growth' %}";
+    const trafficSourceUrl = "{% url 'api_traffic_source' %}";
+    const featureSatisfactionUrl = "{% url 'api_feature_satisfaction' %}";
+    const acquisitionCostUrl = "{% url 'api_acquisition_cost' %}";
+
+    // Fetch utility
+    async function fetchData(url) {
+        const response = await fetch(url);
+        if (!response.ok) return null;
+        return await response.json();
+    }
+
+    // Render functions
+    function renderUserGrowthChart(data) {
+        const ctx = document.getElementById('userGrowthChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line', // Area chart is a line chart with fill
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'New Users',
+                    data: data.values,
+                    backgroundColor: 'rgba(23, 162, 184, 0.3)',
+                    borderColor: '#17a2b8',
+                    fill: true
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+
+    function renderTrafficSourceChart(data) {
+        const ctx = document.getElementById('trafficSourceChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    data: data.values,
+                    backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+
+    function renderFeatureSatisfactionChart(data) {
+        const ctx = document.getElementById('featureSatisfactionChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'polarArea',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Satisfaction (out of 5)',
+                    data: data.values,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.5)',
+                        'rgba(54, 162, 235, 0.5)',
+                        'rgba(255, 206, 86, 0.5)',
+                        'rgba(75, 192, 192, 0.5)',
+                        'rgba(153, 102, 255, 0.5)'
+                    ]
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+
+    function renderAcquisitionCostChart(data) {
+        const ctx = document.getElementById('acquisitionCostChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Customer (Cost vs LTV)',
+                    data: data,
+                    backgroundColor: 'rgba(0, 123, 255, 0.6)'
+                }]
+            },
+            options: {
+                responsive: true, 
+                maintainAspectRatio: false,
+                scales: {
+                    x: { title: { display: true, text: 'Acquisition Cost (R$)' } },
+                    y: { title: { display: true, text: 'Lifetime Value (LTV) (R$)' } }
+                }
+            }
+        });
+    }
+
+    // Initial load
+    document.addEventListener('DOMContentLoaded', async () => {
+        const [userGrowth, traffic, satisfaction, acquisition] = await Promise.all([
+            fetchData(userGrowthUrl),
+            fetchData(trafficSourceUrl),
+            fetchData(featureSatisfactionUrl),
+            fetchData(acquisitionCostUrl)
+        ]);
+
+        if(userGrowth) renderUserGrowthChart(userGrowth);
+        if(traffic) renderTrafficSourceChart(traffic);
+        if(satisfaction) renderFeatureSatisfactionChart(satisfaction);
+        if(acquisition) renderAcquisitionCostChart(acquisition);
+    });
+</script>
+{% endblock %}

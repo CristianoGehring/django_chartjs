@@ -1,0 +1,240 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div id="loading-overlay" style="display: none;">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Dashboard</h1>
+    <button id="refresh-btn" class="btn btn-primary"><i class="fas fa-sync"></i> Refresh Data</button>
+</div>
+
+<!-- KPIs -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="kpi-card bg-gradient-1">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="text-uppercase">Total Sales</div>
+                    <div id="total-sales" class="value">R$ 0,00</div>
+                </div>
+                <i class="fas fa-dollar-sign icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card bg-gradient-2">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="text-uppercase">Total Orders</div>
+                    <div id="total-orders" class="value">0</div>
+                </div>
+                <i class="fas fa-shopping-cart icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card bg-gradient-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="text-uppercase">Avg. Order Value</div>
+                    <div id="avg-order" class="value">R$ 0,00</div>
+                </div>
+                <i class="fas fa-chart-line icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card bg-gradient-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="text-uppercase">Growth</div>
+                    <div id="growth" class="value">0%</div>
+                </div>
+                <i class="fas fa-rocket icon"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="row">
+    <div class="col-lg-8 mb-4">
+        <div class="chart-container" style="position: relative; height:40vh;">
+            <h5 class="text-center">Vendas Mensais (Linha)</h5>
+            <canvas id="salesChart"></canvas>
+        </div>
+    </div>
+    <div class="col-lg-4 mb-4">
+        <div class="chart-container" style="position: relative; height:40vh;">
+            <h5 class="text-center">Distribuição de Produtos (Pizza)</h5>
+            <canvas id="productsChart"></canvas>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="chart-container" style="position: relative; height:40vh;">
+            <h5 class="text-center">Vendas por Categoria (Barras)</h5>
+            <canvas id="categoryChart"></canvas>
+        </div>
+    </div>
+    <div class="col-lg-6 mb-4">
+        <div class="chart-container" style="position: relative; height:40vh;">
+            <h5 class="text-center">Performance de Vendedores (Radar)</h5>
+            <canvas id="salespersonChart"></canvas>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+    const salesDataUrl = "{% url 'api_sales_data' %}";
+    const productsDataUrl = "{% url 'api_products_data' %}";
+    const performanceDataUrl = "{% url 'api_performance_data' %}";
+    const categorySalesUrl = "{% url 'api_category_sales' %}";
+    const salespersonPerformanceUrl = "{% url 'api_salesperson_performance' %}";
+
+    let salesChart, productsChart, categoryChart, salespersonChart;
+
+    const loadingOverlay = document.getElementById('loading-overlay');
+
+    function formatCurrency(value) {
+        return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    async function fetchData(url) {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Fetch error:', error);
+            alert(`Failed to load data from ${url}. Please check the console for details.`);
+            return null;
+        }
+    }
+
+    function renderSalesChart(data) {
+        const ctx = document.getElementById('salesChart').getContext('2d');
+        if (salesChart) salesChart.destroy();
+        salesChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Monthly Sales',
+                    data: data.values,
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+
+    function renderProductsChart(data) {
+        const ctx = document.getElementById('productsChart').getContext('2d');
+        if (productsChart) productsChart.destroy();
+        productsChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Product Distribution',
+                    data: data.values,
+                    backgroundColor: ['#007bff', '#28a745', '#ffc107', '#17a2b8']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+
+    function updateKPIs(data) {
+        document.getElementById('total-sales').textContent = formatCurrency(data.total_sales);
+        document.getElementById('total-orders').textContent = data.total_orders;
+        document.getElementById('avg-order').textContent = formatCurrency(data.avg_order_value);
+        document.getElementById('growth').textContent = `${data.growth_percentage}%`;
+    }
+
+    async function refreshCharts() {
+        loadingOverlay.style.display = 'flex';
+
+        const [salesData, productsData, performanceData, categorySales, salespersonPerformance] = await Promise.all([
+            fetchData(salesDataUrl),
+            fetchData(productsDataUrl),
+            fetchData(performanceDataUrl),
+            fetchData(categorySalesUrl),
+            fetchData(salespersonPerformanceUrl)
+        ]);
+
+        if (salesData) renderSalesChart(salesData);
+        if (productsData) renderProductsChart(productsData);
+        if (performanceData) updateKPIs(performanceData);
+        if (categorySales) renderCategoryChart(categorySales);
+        if (salespersonPerformance) renderSalespersonChart(salespersonPerformance);
+
+        loadingOverlay.style.display = 'none';
+    }
+
+    function renderCategoryChart(data) {
+        const ctx = document.getElementById('categoryChart').getContext('2d');
+        if (categoryChart) categoryChart.destroy();
+        categoryChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Sales by Category',
+                    data: data.values,
+                    backgroundColor: '#28a745'
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+
+    function renderSalespersonChart(data) {
+        const ctx = document.getElementById('salespersonChart').getContext('2d');
+        if (salespersonChart) salespersonChart.destroy();
+        salespersonChart = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: data.labels,
+                datasets: [
+                    {
+                        label: 'Salesperson A',
+                        data: data.salesperson_a,
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        borderColor: 'rgb(255, 99, 132)',
+                        pointBackgroundColor: 'rgb(255, 99, 132)'
+                    },
+                    {
+                        label: 'Salesperson B',
+                        data: data.salesperson_b,
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgb(54, 162, 235)',
+                        pointBackgroundColor: 'rgb(54, 162, 235)'
+                    }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        refreshCharts();
+        document.getElementById('refresh-btn').addEventListener('click', refreshCharts);
+        setInterval(refreshCharts, 5 * 60 * 1000); // Auto-refresh every 5 minutes
+    });
+
+</script>
+{% endblock %}
