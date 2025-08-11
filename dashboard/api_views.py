@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.contrib.auth.mixins import PermissionRequiredMixin
 
 class SalesDataAPI(APIView):
     permission_classes = [IsAuthenticated]
@@ -54,8 +55,9 @@ class SalespersonPerformanceAPI(APIView):
         }
         return Response(data)
 
-class UserGrowthAPI(APIView):
+class UserGrowthAPI(PermissionRequiredMixin, APIView):
     permission_classes = [IsAuthenticated]
+    permission_required = 'dashboard.view_detailed_analysis'
     def get(self, request):
         data = {
             'labels': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
